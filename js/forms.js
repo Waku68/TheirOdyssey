@@ -1,15 +1,15 @@
 // ダイアログと入力フォーム（日付の帯、写真の欄、地図の欄など）。
-import { h, reduceMotion } from './dom.js?v=47';
-import { lang, tr } from './i18n.js?v=47';
-import { MONTHS, WEEK, pad, ymd, parse, today, utc, md, lastDay } from './dates.js?v=47';
-import { store } from './state.js?v=47';
-import { ask, notice } from './ask.js?v=47';
-import { editPhoto } from './photo-editor.js?v=47';
-import { photoImg, pickFile, maxSide, fitImage } from './photos.js?v=47';
-import { geoField, placePhoto, namePhotos, smallThumb } from './places.js?v=47';
-import { songPhotos, songPicker, songRow } from './songs.js?v=47';
-import { SONG_CAT, catLabel } from './cats.js?v=47';
-import { refresh } from './shell.js?v=47';
+import { h, reduceMotion } from './dom.js?v=48';
+import { lang, tr } from './i18n.js?v=48';
+import { MONTHS, WEEK, pad, ymd, parse, today, utc, md, lastDay } from './dates.js?v=48';
+import { store } from './state.js?v=48';
+import { ask, notice } from './ask.js?v=48';
+import { editPhoto } from './photo-editor.js?v=48';
+import { photoImg, pickFile, maxSide, fitImage } from './photos.js?v=48';
+import { geoField, placePhoto, namePhotos, smallThumb } from './places.js?v=48';
+import { songPhotos, songPicker, songRow } from './songs.js?v=48';
+import { SONG_CAT, catLabel } from './cats.js?v=48';
+import { refresh } from './shell.js?v=48';
 
 const BOOKMARK = '<svg viewBox="0 0 10 13" aria-hidden="true"><path d="M0 0h10v13L5 9.5 0 13z" fill="currentColor"/></svg>';
 
@@ -103,8 +103,8 @@ function formParts({ fields, initial = {}, onSubmit, after, submitLabel = 'SAVE'
   let titleEl = null;
   const touch = () => { dirty = true; };
   const err = h('p', { class: 'err', role: 'alert' });
-  const field = (f, inner, tag = 'div') => h(tag, { class: 'field' },
-    f.label && h('span', { class: 'flabel' }, f.label, f.required && !f.readonly && h('span', { class: 'req' }, tr('必須', 'required'))),
+  const field = (f, inner, tag = 'div', extra = null) => h(tag, { class: 'field' },
+    f.label && h('span', { class: 'flabel' }, f.label, f.required && !f.readonly && h('span', { class: 'req' }, tr('必須', 'required')), extra),
     inner, f.hint && h('span', { class: 'hint' }, f.hint));
   const control = (f) => {
     if (f.type === 'geo') return field(f, geoField(v, (info) => onGeo(info)));
@@ -242,6 +242,17 @@ function formParts({ fields, initial = {}, onSubmit, after, submitLabel = 'SAVE'
     }
     const input = h('input', { type: f.type, ...common });
     if (f.name === 'title') titleEl = input;
+    if (f.examples?.length && !f.readonly) {
+      // 例からえらぶ：ラベルの横のボタンで例を並べ、タップした例を欄に入れる
+      // （ラベルの中にボタンがあると、ラベルをタップしたときにボタンが押されるので、外側は div にする）
+      const setOpen = (open) => { list.hidden = !open; btn.classList.toggle('on', open); btn.setAttribute('aria-expanded', String(open)); };
+      const list = h('div', { class: 'chips examples', hidden: true }, f.examples.map((t) => h('button', { type: 'button', class: 'chip', onclick: () => {
+        input.value = t; v[f.name] = t; touch(); setOpen(false); if (f.name === 'title') { onTitle(t); onSongQuery(t); }
+      } }, t)));
+      const btn = h('button', { type: 'button', class: 'chip ex-btn', 'aria-expanded': 'false', onclick: () => setOpen(list.hidden) }, 'EXAMPLES');
+      input.setAttribute('aria-label', f.label);
+      return field(f, h('div', { class: 'ex-field' }, input, list), 'div', btn);
+    }
     return field(f, input, 'label');
   };
   const submit = h('button', { class: 'btn', type: 'submit' }, submitLabel);
