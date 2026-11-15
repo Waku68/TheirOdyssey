@@ -1,13 +1,13 @@
 // MOOD：気分の記録（本人だけに見える）。グラフと、日ごとの入力。
-import { h, reduceMotion } from '../dom.js?v=40';
-import { tr } from '../i18n.js?v=40';
-import { today, md } from '../dates.js?v=40';
-import { store, data, me } from '../state.js?v=40';
-import { markSeenNow, moodSig } from '../seen.js?v=40';
-import { ask } from '../ask.js?v=40';
-import { dayStrip } from '../forms.js?v=40';
-import { levels, moodChart } from '../mood-chart.js?v=40';
-import { act, draw, pageNav, pageHead } from '../shell.js?v=40';
+import { h, reduceMotion } from '../dom.js?v=41';
+import { tr } from '../i18n.js?v=41';
+import { today, md } from '../dates.js?v=41';
+import { store, data, me } from '../state.js?v=41';
+import { markSeenNow, moodSig } from '../seen.js?v=41';
+import { ask } from '../ask.js?v=41';
+import { dayStrip } from '../forms.js?v=41';
+import { levels, moodChart } from '../mood-chart.js?v=41';
+import { act, draw, pageNav, pageHead } from '../shell.js?v=41';
 
 let moodSel = null;
 
