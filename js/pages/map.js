@@ -1,18 +1,21 @@
 // PLACES：過ごした場所と行きたいところの地図と一覧。
-import { h } from '../dom.js?v=48';
-import { tr } from '../i18n.js?v=48';
-import { dots } from '../dates.js?v=48';
-import { store, data } from '../state.js?v=48';
-import { newMark, entryNew } from '../seen.js?v=48';
-import { photoImg } from '../photos.js?v=48';
-import { leaflet, TILE, ATTR, MAP_FEEL, limitMap } from '../places.js?v=48';
-import { inlineForm } from '../forms.js?v=48';
-import { SECTIONS, fromLabel, newEntryRow, openDetail } from '../entries.js?v=48';
-import { draw, pageNav, pageHead } from '../shell.js?v=48';
+import { h } from '../dom.js?v=73';
+import { tr } from '../i18n.js?v=73';
+import { dots } from '../dates.js?v=73';
+import { store, data } from '../state.js?v=73';
+import { newMark, entryNew } from '../seen.js?v=73';
+import { photoImg, allPhotos } from '../photos.js?v=73';
+import { leaflet, TILE, ATTR, MAP_FEEL, limitMap } from '../places.js?v=73';
+import { inlineForm } from '../forms.js?v=73';
+import { SECTIONS, fromLabel, newEntryRow, openDetail } from '../entries.js?v=73';
+import { draw, pageNav, pageHead } from '../shell.js?v=73';
 
 let mapFilter = 'all';
 let mapView = null;
 let addKind = 'place';
+// 地図の下の一覧は、最近足したものから LIST_SHORT 件だけ出す。MORE で全部ひらく（ひらいたままにしておく）
+const LIST_SHORT = 5;
+let listOpen = false;
 function pinIcon(L, e) {
   const el = h('div', { class: `pin ${e.section}${e.photo ? ' ph' : ''}` });
   if (e.photo) {
@@ -137,11 +140,35 @@ function mapPage() {
     setTimeout(fitSize, 380);
   }).catch(() => { mapEl.textContent = tr('地図を読みこめませんでした。', "Couldn't load the map."); });
 
+  // 写真が何枚かあるときは、3枚まで少しずつ傾けて重ねる（いちばん上が表紙）
+  const thumbOf = (e) => {
+    const ps = allPhotos(e).slice(0, 3);
+    if (ps.length < 2) return e.photo ? photoImg(e.photo, 'lthumb') : h('span', { class: `lthumb dot ${e.section}` });
+    return h('span', { class: `lthumb lstack n${ps.length}`, 'aria-label': tr(`写真 ${allPhotos(e).length}枚`, `${allPhotos(e).length} photos`) },
+      ps.map((p, i) => photoImg(p, `ls ls${i}`)).reverse());
+  };
   const row = (e) => newMark(h('button', { class: 'lrow', type: 'button', onclick: () => openDetail(e.id) },
-    e.photo ? photoImg(e.photo, 'lthumb') : h('span', { class: `lthumb dot ${e.section}` }),
+    thumbOf(e),
     h('span', { class: 'ltext' }, h('b', {}, e.title),
       h('small', {}, [e.section === 'place' ? 'PLACES' : 'WISHES', e.date && dots(e.date), e.lat == null && tr('地図なし', 'no pin')].filter(Boolean).join(' ・ '))),
     h('span', { 'aria-hidden': 'true' }, '›')), entryNew(e));
+
+  // 一覧は足した順（新しいものが上）。地図のピンは shownList のまま全部
+  const listed = [...shownList].sort((a, b) => (b.created_at < a.created_at ? -1 : 1));
+  const list = h('div', { class: 'list' });
+  const paintList = () => {
+    const open = listOpen || listed.length <= LIST_SHORT;
+    const hidden = listed.slice(LIST_SHORT);
+    const more = !open && h('button', { type: 'button', class: 'btn ghost small list-more', 'aria-expanded': 'false', onclick: () => { listOpen = true; paintList(); } },
+      `MORE (${hidden.length})`);
+    // 隠れている中に NEW! があれば、ボタンにも出す（ひらくまで「見た」ことにはしない）
+    if (more && hidden.some((e) => entryNew(e).length)) { more.classList.add('is-new'); more.append(h('span', { class: 'newtag', 'aria-label': 'NEW' }, 'NEW!')); }
+    const less = open && listed.length > LIST_SHORT && h('button', { type: 'button', class: 'btn ghost small list-more', 'aria-expanded': 'true', onclick: () => { listOpen = false; paintList(); list.lastElementChild?.scrollIntoView({ block: 'nearest' }); } }, 'LESS');
+    // 閉じているときは、MORE の上に縦の点（⋮）を出して、まだ下に続くのが分かるようにする
+    const dots = more && h('span', { class: 'list-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'));
+    list.replaceChildren(...(open ? listed : listed.slice(0, LIST_SHORT)).map(row), dots || '', more || less || '');
+  };
+  paintList();
 
   const addBox = h('div', { class: 'addbox mcard' });
   const renderAdd = () => {
@@ -157,7 +184,7 @@ function mapPage() {
 
   return h('div', {}, pageNav(),
     h('div', { class: 'places-top' }, head, chips, mapEl, shield, h('div', { class: 'places-spacer' }), legend),
-    shownList.length ? h('div', { class: 'list' }, shownList.map(row)) : h('p', { class: 'empty' }, tr('まだ何もありません。下から最初のひとつを。', 'Nothing here yet. Add the first one below.')),
+    shownList.length ? list : h('p', { class: 'empty' }, tr('まだ何もありません。下から最初のひとつを。', 'Nothing here yet. Add the first one below.')),
     h('section', { class: 'madd', id: 'place-add' },
       h('h2', { class: 'en madd-title' }, 'Add'), h('p', { class: 'jp' }, tr('場所を追加', 'Add a place')), addBox));
 }
